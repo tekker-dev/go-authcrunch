@@ -1,6 +1,6 @@
 module github.com/tekker-dev/go-authcrunch
 
-go 1.20
+go 1.21
 
 replace github.com/greenpau/go-authcrunch v1.0.50 => github.com/tekker-dev/go-authcrunch v1.99.1
 

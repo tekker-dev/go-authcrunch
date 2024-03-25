@@ -17,9 +17,9 @@ package identity
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -59,13 +59,15 @@ var (
 	}
 )
 
+var apiKeyRegexPattern = regexp.MustCompile(`^[A-Za-z0-9]{64,72}$`)
+
 func init() {
 	app = versioned.NewPackageManager("authdb")
 	app.Description = "authdb"
 	app.Documentation = "https://github.com/greenpau/go-authcrunch"
-	app.SetVersion(appVersion, "1.0.50")
+	app.SetVersion(appVersion, "1.1.2")
 	app.SetGitBranch(gitBranch, "main")
-	app.SetGitCommit(gitCommit, "v1.0.49-3-g5faadfc")
+	app.SetGitCommit(gitCommit, "v1.1.1-3-gaaf9dce")
 	app.SetBuildUser(buildUser, "")
 	app.SetBuildDate(buildDate, "")
 }
@@ -483,7 +485,8 @@ func (db *Database) commit() error {
 	if err != nil {
 		return errors.ErrDatabaseCommit.WithArgs(db.path, err)
 	}
-	if err := ioutil.WriteFile(db.path, []byte(data), 0600); err != nil {
+
+	if err := os.WriteFile(db.path, []byte(data), 0600); err != nil {
 		return errors.ErrDatabaseCommit.WithArgs(db.path, err)
 	}
 	return nil
@@ -535,7 +538,9 @@ func (db *Database) GetPublicKeys(r *requests.Request) error {
 			continue
 		}
 		if k.Disabled {
-			continue
+			if !r.Key.IncludeAll {
+				continue
+			}
 		}
 		bundle.Add(k)
 	}
@@ -556,7 +561,9 @@ func (db *Database) GetPublicKey(r *requests.Request) error {
 			continue
 		}
 		if k.Disabled {
-			continue
+			if !r.Key.IncludeAll {
+				continue
+			}
 		}
 		if k.ID != r.Key.ID {
 			continue
@@ -592,7 +599,24 @@ func (db *Database) AddAPIKey(r *requests.Request) error {
 	if err != nil {
 		return errors.ErrAddAPIKey.WithArgs(r.Key.Usage, err)
 	}
-	s := util.GetRandomString(72)
+
+	s := r.Key.Payload
+	if s == "" {
+		s = util.GetRandomString(72)
+	}
+
+	if len(s) < 64 {
+		return errors.ErrAddAPIKey.WithArgs(r.Key.Usage, "the key is too short")
+	}
+
+	if len(s) > 72 {
+		return errors.ErrAddAPIKey.WithArgs(r.Key.Usage, "the key is too long")
+	}
+
+	if !apiKeyRegexPattern.MatchString(s) {
+		return errors.ErrAddAPIKey.WithArgs(r.Key.Usage, "the key is non compliant")
+	}
+
 	failCount := 0
 	for {
 		hk, err := NewPassword(s)
@@ -805,7 +829,9 @@ func (db *Database) GetMfaTokens(r *requests.Request) error {
 	bundle := NewMfaTokenBundle()
 	for _, token := range user.MfaTokens {
 		if token.Disabled {
-			continue
+			if !r.MfaToken.IncludeAll {
+				continue
+			}
 		}
 		bundle.Add(token)
 	}
@@ -823,7 +849,9 @@ func (db *Database) GetMfaToken(r *requests.Request) error {
 	}
 	for _, token := range user.MfaTokens {
 		if token.Disabled {
-			continue
+			if !r.MfaToken.IncludeAll {
+				continue
+			}
 		}
 		if token.ID != r.MfaToken.ID {
 			continue

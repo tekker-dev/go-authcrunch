@@ -246,10 +246,17 @@ func (p *PublicKey) parsePublicKeyPGP() error {
 		break
 	}
 	comment = fmt.Sprintf("%s, algo %s, created %s", user, algo, pk.CreationTime.UTC())
-	if p.Comment != "" {
-		p.Comment = fmt.Sprintf("%s (%s)", p.Comment, comment)
-	} else {
+
+	if p.Comment == "" {
 		p.Comment = comment
+	}
+
+	if p.Description == "" && p.Comment != comment {
+		p.Description = comment
+	}
+
+	if !strings.Contains(p.Description, comment) && !strings.Contains(p.Comment, comment) {
+		p.Description = p.Description + " " + comment
 	}
 	return nil
 }
@@ -259,6 +266,7 @@ func (p *PublicKey) parsePublicKeyRSA() error {
 	if p.Usage != "ssh" {
 		return errors.ErrPublicKeyUsagePayloadMismatch.WithArgs(p.Usage)
 	}
+
 	block, _ := pem.Decode(bytes.TrimSpace([]byte(p.Payload)))
 	if block == nil {
 		return errors.ErrPublicKeyBlockType.WithArgs("")
@@ -266,10 +274,12 @@ func (p *PublicKey) parsePublicKeyRSA() error {
 	if block.Type != "RSA PUBLIC KEY" {
 		return errors.ErrPublicKeyBlockType.WithArgs(block.Type)
 	}
-	publicKeyInterface, err := x509.ParsePKIXPublicKey(block.Bytes)
+
+	publicKeyInterface, err := x509.ParsePKCS1PublicKey(block.Bytes)
 	if err != nil {
 		return errors.ErrPublicKeyParse.WithArgs(err)
 	}
+
 	publicKey, err := ssh.NewPublicKey(publicKeyInterface)
 	if err != nil {
 		return fmt.Errorf("failed ssh.NewPublicKey: %s", err)

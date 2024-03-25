@@ -37,12 +37,18 @@ func (p *Portal) FetchUserMultiFactorVerifiers(
 	backend ids.IdentityStore) error {
 
 	// List MFA Tokens.
+	rr.MfaToken.IncludeAll = true
 	if err := backend.Request(operator.GetMfaTokens, rr); err != nil {
 		resp["message"] = "Profile API failed to get user multi factor authenticators"
 		return handleAPIProfileResponse(w, rr, http.StatusInternalServerError, resp)
 	}
 	bundle := rr.Response.Payload.(*identity.MfaTokenBundle)
-	resp["entries"] = bundle.Get()
+
+	tokens := bundle.Get()
+	// for _, token := range tokens {
+	// 	token.Secret = ""
+	// }
+	resp["entries"] = tokens
 	return handleAPIProfileResponse(w, rr, http.StatusOK, resp)
 }
 

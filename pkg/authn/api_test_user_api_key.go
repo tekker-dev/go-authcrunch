@@ -25,35 +25,8 @@ import (
 	"github.com/greenpau/go-authcrunch/pkg/user"
 )
 
-// FetchUserAPIKeys fetches API keys from user identity.
-func (p *Portal) FetchUserAPIKeys(
-	ctx context.Context,
-	w http.ResponseWriter,
-	r *http.Request,
-	rr *requests.Request,
-	parsedUser *user.User,
-	resp map[string]interface{},
-	usr *user.User,
-	backend ids.IdentityStore) error {
-
-	rr.Key.Usage = "api"
-	if err := backend.Request(operator.GetAPIKeys, rr); err != nil {
-		resp["message"] = "Profile API failed to get API keys"
-		return handleAPIProfileResponse(w, rr, http.StatusInternalServerError, resp)
-	}
-	bundle := rr.Response.Payload.(*identity.APIKeyBundle)
-
-	apiKeys := bundle.Get()
-	// for _, apiKey := range apiKeys {
-	// 	apiKey.Payload = ""
-	// 	apiKey.Prefix = ""
-	// }
-	resp["entries"] = apiKeys
-	return handleAPIProfileResponse(w, rr, http.StatusOK, resp)
-}
-
-// FetchUserAPIKey fetches API key from user identity.
-func (p *Portal) FetchUserAPIKey(
+// TestUserAPIKey tests API key.
+func (p *Portal) TestUserAPIKey(
 	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
@@ -65,10 +38,32 @@ func (p *Portal) FetchUserAPIKey(
 	bodyData map[string]interface{}) error {
 
 	rr.Key.Usage = "api"
+
+	var keyContent string
+
+	// Extract data.
 	if v, exists := bodyData["id"]; exists {
-		rr.Key.ID = v.(string)
+		switch keyID := v.(type) {
+		case string:
+			rr.Key.ID = keyID
+		default:
+			resp["message"] = "Profile API did find key id in the request payload, but it is malformed"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
 	} else {
-		resp["message"] = "Profile API did not find id in the request payload"
+		resp["message"] = "Profile API did not find key id in the request payload"
+		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+	}
+	if v, exists := bodyData["content"]; exists {
+		switch exp := v.(type) {
+		case string:
+			keyContent = exp
+		default:
+			resp["message"] = "Profile API did find key content in the request payload, but it is malformed"
+			return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
+		}
+	} else {
+		resp["message"] = "Profile API did not find key content in the request payload"
 		return handleAPIProfileResponse(w, rr, http.StatusBadRequest, resp)
 	}
 
@@ -76,7 +71,13 @@ func (p *Portal) FetchUserAPIKey(
 		resp["message"] = "Profile API failed to get API key"
 		return handleAPIProfileResponse(w, rr, http.StatusInternalServerError, resp)
 	}
-	token := rr.Response.Payload.(*identity.APIKey)
-	resp["entry"] = token
+	apiKey := rr.Response.Payload.(*identity.APIKey)
+
+	if !apiKey.Match(keyContent) {
+		resp["message"] = "Profile API failed to validate provided API key"
+		return handleAPIProfileResponse(w, rr, http.StatusInternalServerError, resp)
+	}
+
+	resp["entry"] = "OK"
 	return handleAPIProfileResponse(w, rr, http.StatusOK, resp)
 }

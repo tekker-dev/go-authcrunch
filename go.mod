@@ -2,7 +2,7 @@ module github.com/tekker-dev/go-authcrunch
 
 go 1.21
 
-replace github.com/greenpau/go-authcrunch v1.1.2 => github.com/tekker-dev/go-authcrunch v1.99.1
+replace github.com/greenpau/go-authcrunch v1.1.2 => github.com/tekker-dev/go-authcrunch v1.99.2
 
 require (
 	github.com/crewjam/saml v0.4.14

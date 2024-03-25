@@ -2,7 +2,7 @@ module github.com/tekker-dev/go-authcrunch
 
 go 1.21
 
-replace github.com/greenpau/go-authcrunch v1.0.50 => github.com/tekker-dev/go-authcrunch v1.99.1
+replace github.com/greenpau/go-authcrunch v1.1.2 => github.com/tekker-dev/go-authcrunch v1.99.1
 
 require (
 	github.com/crewjam/saml v0.4.14
@@ -12,7 +12,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/google/go-cmp v0.6.0
 	github.com/google/uuid v1.6.0
-	github.com/greenpau/go-authcrunch v1.0.50
+	github.com/greenpau/go-authcrunch v1.1.2
 	github.com/greenpau/versioned v1.0.30
 	github.com/iancoleman/strcase v0.3.0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e

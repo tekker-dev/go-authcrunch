@@ -65,9 +65,9 @@ func init() {
 	app = versioned.NewPackageManager("authdb")
 	app.Description = "authdb"
 	app.Documentation = "https://github.com/greenpau/go-authcrunch"
-	app.SetVersion(appVersion, "1.1.2")
+	app.SetVersion(appVersion, "1.1.3")
 	app.SetGitBranch(gitBranch, "main")
-	app.SetGitCommit(gitCommit, "v1.1.1-3-gaaf9dce")
+	app.SetGitCommit(gitCommit, "v1.1.2-4-g47945a0")
 	app.SetBuildUser(buildUser, "")
 	app.SetBuildDate(buildDate, "")
 }
@@ -245,7 +245,7 @@ func (db *Database) checkUserPolicyCompliance(s string) error {
 
 func (db *Database) checkPasswordPolicyCompliance(s string) error {
 	if len(s) > db.Policy.Password.MaxLength || len(s) < db.Policy.Password.MinLength {
-		return errors.ErrPasswordPolicyCompliance
+		return errors.ErrPasswordPolicyCompliance.WithArgs(fmt.Errorf("password length is %d characters", len(s)))
 	}
 	return nil
 }
@@ -962,15 +962,15 @@ func (db *Database) GetPasswordPolicyRegex() string {
 func (db *Database) UserExists(username, emailAddress string) (bool, error) {
 	username = strings.ToLower(username)
 	emailAddress = strings.ToLower(emailAddress)
-	user1, _ := db.refUsername[username]
-	user2, _ := db.refEmailAddress[emailAddress]
+	user1 := db.refUsername[username]
+	user2 := db.refEmailAddress[emailAddress]
 	switch {
 	case user1 == nil && user2 == nil:
 		return false, nil
 	case user1 == nil:
 		return false, fmt.Errorf("email is registered to a user, while username not found")
 	case user2 == nil:
-		return false, fmt.Errorf("username is registered to a user, while email not found")
+		return false, fmt.Errorf("username is registered to a user, while email not found (username: %s, email: %s)", username, emailAddress)
 	}
 	if user1.ID != user2.ID {
 		return false, fmt.Errorf("username and email address belong to two different users")
